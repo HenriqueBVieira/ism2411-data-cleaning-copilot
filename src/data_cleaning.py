@@ -1,13 +1,9 @@
-"""
-data_cleaning.py
+import pandas as pd #imports pandas library as it is optimal for handling data
 
-This script gets messy sales data from raw csv files and cleans the data to 
-standardize and verify the data.
-"""
 #Copilot assisted function
-#Function that loads data: loads the csv file into a pandas dataframe
+#Function that loads data from a csv file
 def load_data(file_path):
-    import pandas as pd
+    "Loads the csv into pandas dataframe"
     try:
         df = pd.read_csv(file_path)
         print(f"Loaded {len(df)} rows from {file_path}")
@@ -15,39 +11,61 @@ def load_data(file_path):
     except FileNotFoundError:
         print(f"Error: File {file_path} not found")
         return None
-import pandas as pd # Importing pandas library as it is optimal to manipulate data
-
-df = load_data("data/raw/sales_data_raw.csv")
-if df is None:
-    exit()  #stops running if file is missing
 
 #Copilot assisted function
-#Function that cleans column names: standardizes column names by making them lowercase and replacing spaces with _
+#Function that standardizes column names and rename them
 def clean_column_names(df):
-    # Clean all column names
+    "Standardizes colummn names and rename them"
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
-    
-    # Rename specific columns for clarity
-    rename_map = {
-        "prodname": "product_name",
-        "qty": "quantity"
-    }
+    rename_map = {"prodname": "product_name", "qty": "quantity"}
     df = df.rename(columns=rename_map)
-    
     return df
 
-if "product_name" in df.columns: # Striping whitespace as it can cause mistakes when grouping / organizing data
-    df["product_name"] = df["product_name"].str.strip()
-if "category" in df.columns:
-    df["category"] = df["category"].str.strip()
+#Copilot assisted function
+#Function that strips whitespace from string columns
+def strip_whitespace(df):
+    "Strip whitespace from string columns."
+    for col in ["product_name", "category"]:
+        if col in df.columns:
+            df[col] = df[col].str.strip()
+    return df
 
-df["price"] = pd.to_numeric(df["price"], errors="coerce") #converts to numeric values
-df["qty"] = pd.to_numeric(df["qty"], errors="coerce")
+#Copilot assisted function
+#Function that converts price and quantity columns to numeric
+def convert_numeric(df):
+    """Convert price and quantity columns to numeric."""
+    for col in ["price", "quantity"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df
 
-df = df.dropna(subset=["price", "qty"]) #Droping rows with missing values as they are essential for the analysis
+#Copilot assisted function
+#Function that handles missing values by dropping rows with missing values
+def handle_missing_values(df):
+    "drops rows with missing values"
+    if "price" in df.columns and "quantity" in df.columns:
+        df = df.dropna(subset=["price", "quantity"])
+    return df
 
-df = df[(df["price"] >= 0) & (df["qty"] >= 0)] #Remove any possible negative value as they are usually mistakes
+#Copilot assisted function
+#Function that removes rows with negative prices or quantities
+def remove_invalid_rows(df):
+    "Remove rows with negative price or quantity"
+    if "price" in df.columns and "quantity" in df.columns:
+        df = df[(df["price"] >= 0) & (df["quantity"] >= 0)]
+    return df
 
-output_file_path = "data/processed/sales_data_clean.csv"
-df.to_csv(output_file_path, index=False) #putting clean data into the processed folder
+if __name__ == "__main__":
+    raw_path = "data/raw/sales_data_raw.csv"
+    cleaned_path = "data/processed/sales_data_clean.csv"
 
+    df_raw = load_data(raw_path)
+    if df_raw is not None:
+        df_clean = clean_column_names(df_raw)
+        df_clean = strip_whitespace(df_clean)
+        df_clean = convert_numeric(df_clean)
+        df_clean = handle_missing_values(df_clean)
+        df_clean = remove_invalid_rows(df_clean)
+        df_clean.to_csv(cleaned_path, index=False)
+        print("Cleaning complete. First few rows:")
+        print(df_clean.head())
